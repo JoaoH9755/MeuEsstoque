@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Controle de Estoque</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-boxes"></i> Estoque Social</h2>
+                <div class="user-info">
+                    <small id="current-user">Carregando...</small>
+                    <button class="btn btn-sm btn-danger btn-logout" onclick="estoque.logout()">
+                        <i class="fas fa-sign-out-alt"></i> Sair
+                    </button>
+                </div>
+            </div>
+            <div class="sidebar-menu">
+                <div class="menu-item active" data-page="dashboard">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </div>
+                <div class="menu-item" data-page="produtos">
+                    <i class="fas fa-box"></i> Produtos
+                </div>
+                <div class="menu-item" data-page="entradas">
+                    <i class="fas fa-arrow-down"></i> Entradas
+                </div>
+                <div class="menu-item" data-page="saidas">
+                    <i class="fas fa-arrow-up"></i> Saídas
+                </div>
+                <div class="menu-item" data-page="relatorios">
+                    <i class="fas fa-chart-bar"></i> Relatórios
+                </div>
+                <div class="menu-item" data-page="alertas">
+                    <i class="fas fa-exclamation-triangle"></i> Alertas
+                </div>
+                <div class="menu-item" data-page="configuracoes">
+                    <i class="fas fa-cogs"></i> Configurações
+                </div>
+            </div>
+        </div>
+
+        <!-- Conteúdo Principal -->
+        <div class="main-content">
+            <!-- Dashboard -->
+            <div class="page active" id="dashboard">
+                <div class="header">
+                    <h1 class="page-title">Dashboard</h1>
+                    <div class="date-filter">
+                        <input type="date" id="date-filter">
+                    </div>
+                </div>
+
+                <!-- Cards de Resumo -->
+                <div class="cards-container">
+                    <div class="card">
+                        <div class="card-icon card-total">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="card-title">Total de Produtos</div>
+                        <div class="card-value" id="total-produtos">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-alert">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="card-title">Produtos em Alerta</div>
+                        <div class="card-value" id="produtos-alerta">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-low">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-title">Estoque Baixo</div>
+                        <div class="card-value" id="estoque-baixo">0</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <div class="chart-title">Movimentação de Estoque (Últimos 7 dias)</div>
+                        <canvas id="movimentacaoChart" width="400" height="200"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Produtos por Categoria</div>
+                        <canvas id="categoriasChart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+
+                <!-- Produtos em Alerta -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Produtos em Alerta</h3>
+                        <a href="#" onclick="estoque.mostrarPagina('alertas')" class="btn btn-sm btn-primary">Ver Todos</a>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th>Estoque Atual</th>
+                                <th>Estoque Mínimo</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alerta-table-body">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página de Produtos -->
+            <div class="page" id="produtos">
+                <div class="header">
+                    <h1 class="page-title">Gerenciar Produtos</h1>
+                    <button class="btn btn-primary" id="btn-novo-produto">
+                        <i class="fas fa-plus"></i> Novo Produto
+                    </button>
+                </div>
+
+                <!-- Formulário de Produto -->
+                <div class="form-container" id="form-produto" style="display: none;">
+                    <h3 id="form-title">Adicionar Produto</h3>
+                    <form id="produto-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="produto-nome">Nome do Produto *</label>
+                                <input type="text" id="produto-nome" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="produto-codigo">Código do Produto *</label>
+                                <input type="text" id="produto-codigo" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="produto-categoria">Categoria *</label>
+                                <select id="produto-categoria" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="produto-quantidade">Quantidade Inicial *</label>
+                                <input type="number" id="produto-quantidade" min="0" required>
+                            </div>
+                            <div class="form-group" id="estoque-minimo-group">
+                                <label for="produto-minimo">Estoque Mínimo *</label>
+                                <input type="number" id="produto-minimo" min="0" required>
+                            </div>
+                            <div class="form-group" id="estoque-maximo-group">
+                                <label for="produto-maximo">Estoque Máximo</label>
+                                <input type="number" id="produto-maximo" min="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="produto-preco">Preço Unitário (R$) *</label>
+                                <input type="number" id="produto-preco" min="0" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="produto-localizacao">Localização</label>
+                                <input type="text" id="produto-localizacao" placeholder="Prateleira, armário, etc.">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Imagem do Produto (Opcional)</label>
+                            <div class="image-upload" onclick="document.getElementById('produto-imagem').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <div>Clique para adicionar uma imagem</div>
+                                <input type="file" id="produto-imagem" accept="image/*">
+                            </div>
+                            <img id="image-preview" class="image-preview" alt="Pré-visualização">
+                        </div>
+                        <div class="form-group">
+                            <label for="produto-descricao">Descrição</label>
+                            <textarea id="produto-descricao" rows="3" placeholder="Descrição detalhada do produto..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Salvar Produto
+                            </button>
+                            <button type="button" class="btn btn-danger" id="btn-cancelar">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabela de Produtos -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Lista de Produtos</h3>
+                        <div class="search-box">
+                            <input type="text" id="search-produto" placeholder="Buscar produto...">
+                            <select id="filter-categoria">
+                                <option value="">Todas as categorias</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Produto</th>
+                                <th>Código</th>
+                                <th>Categoria</th>
+                                <th>Estoque</th>
+                                <th>Mínimo</th>
+                                <th>Preço (R$)</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="produtos-table-body">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página de Entradas -->
+            <div class="page" id="entradas">
+                <div class="header">
+                    <h1 class="page-title">Entradas no Estoque</h1>
+                    <button class="btn btn-primary" id="btn-nova-entrada">
+                        <i class="fas fa-plus"></i> Nova Entrada
+                    </button>
+                </div>
+
+                <!-- Formulário de Entrada -->
+                <div class="form-container" id="form-entrada" style="display: none;">
+                    <h3>Registrar Entrada</h3>
+                    <form id="entrada-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="entrada-produto">Produto *</label>
+                                <select id="entrada-produto" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="entrada-quantidade">Quantidade *</label>
+                                <input type="number" id="entrada-quantidade" min="1" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="entrada-fornecedor">Fornecedor *</label>
+                                <select id="entrada-fornecedor" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="entrada-data">Data *</label>
+                                <input type="date" id="entrada-data" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="entrada-nota">Nº Nota Fiscal</label>
+                                <input type="text" id="entrada-nota">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="entrada-observacao">Observação</label>
+                            <textarea id="entrada-observacao" rows="3" placeholder="Observações sobre esta entrada..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Registrar Entrada
+                            </button>
+                            <button type="button" class="btn btn-danger" id="btn-cancelar-entrada">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabela de Entradas -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Histórico de Entradas</h3>
+                        <div class="search-box">
+                            <input type="text" id="search-entrada" placeholder="Buscar entrada...">
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Fornecedor</th>
+                                <th>Data</th>
+                                <th>Nota Fiscal</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="entradas-table-body">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página de Saídas -->
+            <div class="page" id="saidas">
+                <div class="header">
+                    <h1 class="page-title">Saídas do Estoque</h1>
+                    <button class="btn btn-primary" id="btn-nova-saida">
+                        <i class="fas fa-plus"></i> Nova Saída
+                    </button>
+                </div>
+
+                <!-- Formulário de Saída -->
+                <div class="form-container" id="form-saida" style="display: none;">
+                    <h3>Registrar Saída</h3>
+                    <form id="saida-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="saida-produto">Produto *</label>
+                                <select id="saida-produto" required>
+                                    <option value="">Selecione...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="saida-quantidade">Quantidade *</label>
+                                <input type="number" id="saida-quantidade" min="1" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="saida-destino">Destino *</label>
+                                <select id="saida-destino" required>
+                                    <option value="">Selecione...</option>
+                                    <option value="Doação">Doação</option>
+                                    <option value="Venda">Venda</option>
+                                    <option value="Uso Interno">Uso Interno</option>
+                                    <option value="Perda">Perda</option>
+                                    <option value="Outros">Outros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="saida-data">Data *</label>
+                                <input type="date" id="saida-data" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="saida-beneficiario">Beneficiário/Cliente</label>
+                                <input type="text" id="saida-beneficiario">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="saida-observacao">Observação</label>
+                            <textarea id="saida-observacao" rows="3" placeholder="Observações sobre esta saída..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> Registrar Saída
+                            </button>
+                            <button type="button" class="btn btn-danger" id="btn-cancelar-saida">
+                                <i class="fas fa-times"></i> Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabela de Saídas -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Histórico de Saídas</h3>
+                        <div class="search-box">
+                            <input type="text" id="search-saida" placeholder="Buscar saída...">
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Destino</th>
+                                <th>Beneficiário</th>
+                                <th>Data</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="saidas-table-body">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página de Relatórios -->
+            <div class="page" id="relatorios">
+                <div class="header">
+                    <h1 class="page-title">Relatórios</h1>
+                    <div>
+                        <button class="btn btn-primary" id="btn-exportar">
+                            <i class="fas fa-file-export"></i> Exportar Dados
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="form-container">
+                    <h3>Filtros</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="relatorio-periodo">Período</label>
+                            <select id="relatorio-periodo">
+                                <option value="7">Últimos 7 dias</option>
+                                <option value="30" selected>Últimos 30 dias</option>
+                                <option value="90">Últimos 3 meses</option>
+                                <option value="365">Último ano</option>
+                                <option value="custom">Personalizado</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="custom-dates" style="display: none;">
+                            <label for="relatorio-data-inicio">Data Início</label>
+                            <input type="date" id="relatorio-data-inicio">
+                            <label for="relatorio-data-fim">Data Fim</label>
+                            <input type="date" id="relatorio-data-fim">
+                        </div>
+                        <div class="form-group">
+                            <label for="relatorio-categoria">Categoria</label>
+                            <select id="relatorio-categoria">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" id="btn-gerar-relatorio">
+                        <i class="fas fa-chart-bar"></i> Gerar Relatório
+                    </button>
+                </div>
+
+                <!-- Métricas -->
+                <div class="cards-container">
+                    <div class="card">
+                        <div class="card-icon card-total">
+                            <i class="fas fa-arrow-down"></i>
+                        </div>
+                        <div class="card-title">Total de Entradas</div>
+                        <div class="card-value" id="relatorio-total-entradas">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-alert">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                        <div class="card-title">Total de Saídas</div>
+                        <div class="card-value" id="relatorio-total-saidas">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-low">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                        <div class="card-title">Saldo Líquido</div>
+                        <div class="card-value" id="relatorio-saldo-liquido">0</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-icon card-movimentacao">
+                            <i class="fas fa-boxes"></i>
+                        </div>
+                        <div class="card-title">Produtos Movimentados</div>
+                        <div class="card-value" id="relatorio-produtos-movimentados">0</div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <div class="chart-title">Movimentação por Categoria</div>
+                        <canvas id="relatorioCategoriasChart" width="400" height="300"></canvas>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-title">Produtos Mais Movimentados</div>
+                        <canvas id="relatorioProdutosChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Tabela de Relatório -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Relatório Detalhado</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th>Entradas</th>
+                                <th>Saídas</th>
+                                <th>Saldo</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="relatorio-table-body">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página de Alertas -->
+            <div class="page" id="alertas">
+                <div class="header">
+                    <h1 class="page-title">Alertas de Estoque</h1>
+                </div>
+
+                <!-- Alertas Críticos -->
+                <div class="alert alert-danger" id="alerta-critico">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <div>
+                        <strong>Atenção!</strong> Existem <span id="count-critico">0</span> produtos com estoque crítico que necessitam de reposição urgente.
+                    </div>
+                </div>
+
+                <!-- Alertas de Reposição -->
+                <div class="alert alert-warning" id="alerta-reposicao">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div>
+                        <strong>Aviso!</strong> Existem <span id="count-reposicao">0</span> produtos próximos do estoque mínimo e devem ser repostos em breve.
+                    </div>
+                </div>
+
+                <!-- Alertas de Excesso -->
+                <div class="alert alert-info" id="alerta-excesso">
+                    <i class="fas fa-info-circle"></i>
+                    <div>
+                        <strong>Informação!</strong> Existem <span id="count-excesso">0</span> produtos com estoque acima do máximo recomendado.
+                    </div>
+                </div>
+
+                <!-- Tabela de Alertas -->
+                <div class="table-container">
+                    <div class="table-header">
+                        <h3>Produtos com Estoque Baixo</h3>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th>Estoque Atual</th>
+                                <th>Estoque Mínimo</th>
+                                <th>Estoque Máximo</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertas-table-body">
+                            <!-- Dados serão preenchidos via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Página de Configurações (ATUALIZADA) -->
+            <div class="page" id="configuracoes">
+                <div class="header">
+                    <h1 class="page-title">Configurações</h1>
+                </div>
+
+                <!-- Configurações do Sistema -->
+                <div class="form-container">
+                    <h3>Configurações do Sistema</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="switch">
+                                <input type="checkbox" id="toggle-estoque-minimo" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span style="margin-left: 10px;">Habilitar Controle de Estoque Mínimo</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="switch">
+                                <input type="checkbox" id="toggle-estoque-maximo">
+                                <span class="slider"></span>
+                            </label>
+                            <span style="margin-left: 10px;">Habilitar Controle de Estoque Máximo</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="estoque.salvarConfiguracoesSistema()">
+                        <i class="fas fa-save"></i> Salvar Configurações
+                    </button>
+                </div>
+
+                <!-- Histórico de Produtos Excluídos (MOVIDO para Configurações) -->
+                <div class="form-container">
+                    <h3>Histórico de Produtos Excluídos</h3>
+                    
+                    <!-- Abas para navegação -->
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="historico-entradas">Entradas</button>
+                        <button class="tab-btn" data-tab="historico-saidas">Saídas</button>
+                    </div>
+
+                    <!-- Histórico de Entradas -->
+                    <div class="tab-content active" id="historico-entradas">
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h4>Entradas de Produtos Excluídos</h4>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Produto (Excluído)</th>
+                                        <th>Quantidade</th>
+                                        <th>Fornecedor</th>
+                                        <th>Data</th>
+                                        <th>Nota Fiscal</th>
+                                        <th>Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historico-entradas-body">
+                                    <!-- Dados serão preenchidos via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Histórico de Saídas -->
+                    <div class="tab-content" id="historico-saidas">
+                        <div class="table-container">
+                            <div class="table-header">
+                                <h4>Saídas de Produtos Excluídos</h4>
+                            </div>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Produto (Excluído)</th>
+                                        <th>Quantidade</th>
+                                        <th>Destino</th>
+                                        <th>Beneficiário</th>
+                                        <th>Data</th>
+                                        <th>Observação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historico-saidas-body">
+                                    <!-- Dados serão preenchidos via JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gerenciar Categorias -->
+                <div class="form-container">
+                    <h3>Gerenciar Categorias</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <input type="text" id="nova-categoria" placeholder="Nome da nova categoria">
+                        </div>
+                        <button class="btn btn-primary" onclick="estoque.adicionarCategoria()">
+                            <i class="fas fa-plus"></i> Adicionar Categoria
+                        </button>
+                    </div>
+                    <div id="lista-categorias">
+                        <!-- Lista de categorias será preenchida via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Gerenciar Fornecedores -->
+                <div class="form-container">
+                    <h3>Gerenciar Fornecedores</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <input type="text" id="novo-fornecedor" placeholder="Nome do fornecedor">
+                        </div>
+                        <div class="form-group">
+                            <input type="text" id="fornecedor-contato" placeholder="Contato">
+                        </div>
+                        <button class="btn btn-primary" onclick="estoque.adicionarFornecedor()">
+                            <i class="fas fa-plus"></i> Adicionar Fornecedor
+                        </button>
+                    </div>
+                    <div id="lista-fornecedores">
+                        <!-- Lista de fornecedores será preenchida via JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Backup de Dados -->
+                <div class="form-container">
+                    <h3>Backup de Dados</h3>
+                    <div class="form-row">
+                        <button class="btn btn-success" onclick="estoque.exportarDados()">
+                            <i class="fas fa-download"></i> Exportar Dados
+                        </button>
+                        <button class="btn btn-warning" onclick="document.getElementById('import-file').click()">
+                            <i class="fas fa-upload"></i> Importar Dados
+                        </button>
+                        <input type="file" id="import-file" accept=".json" style="display: none;" onchange="estoque.importarDados(this.files[0])">
+                        <button class="btn btn-danger" onclick="estoque.limparDados()">
+                            <i class="fas fa-trash"></i> Limpar Todos os Dados
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação -->
+    <div id="modal-confirm" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirmação</h3>
+            <p id="modal-message">Tem certeza que deseja realizar esta ação?</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="modal-confirm-btn">Confirmar</button>
+                <button class="btn btn-secondary" id="modal-cancel-btn">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
